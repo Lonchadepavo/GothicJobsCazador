@@ -1,0 +1,16 @@
+nivel0:
+  ratopo:
+    sin-desollar:
+      - Cuero pequeño,1
+    desollado:
+      - Carne,2
+  carroñero:
+    sin-desollar:
+      - Cuero medio, 1
+    desollado:
+      - Carne,1
+nivel1:
+nivel2:
+nivel3:
+nivel4:
+nivel5:

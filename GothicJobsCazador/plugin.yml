@@ -1,0 +1,7 @@
+name: GothicJobsCazador
+main: com.loncha.gothicjobscazador.Main
+version: 0.1
+commands:
+   reloadcazador:
+      description: Recarga todos los archivos de configuracion del cazador.
+      usage: /reloadcazador
