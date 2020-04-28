@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Server;
@@ -25,7 +26,9 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.generator.ChunkGenerator;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
@@ -172,7 +175,13 @@ public class MecanicasCaza implements Listener, Plugin {
 											b.setMetadata(nombreItem, new FixedMetadataValue(m, cantidadItem));
 											
 											if (cantidadItem == 0) {
-												itemInHand.setDurability((short) (itemInHand.getDurability()+2));
+												
+												if (itemInHand.getDurability() < itemInHand.getType().getMaxDurability()) {
+													itemInHand.setDurability((short) (itemInHand.getDurability()+1));
+												} else {
+													p.getInventory().setItemInMainHand(new ItemStack(Material.AIR));
+												}
+												
 												b.removeMetadata(nombreItem, m);
 												b.removeMetadata("sin-desollar", m);
 												
@@ -230,9 +239,14 @@ public class MecanicasCaza implements Listener, Plugin {
 									
 									if (b.hasMetadata(nombreItem)) {
 										int cantidadItem = b.getMetadata(nombreItem).get(0).asInt();
-										System.out.println("cantidad2: " + cantidadItem);
 										if (cantidadItem > 0) {
-											itemInHand.setDurability((short) (itemInHand.getDurability()+2));
+											
+											if (itemInHand.getDurability() < itemInHand.getType().getMaxDurability()) {
+												itemInHand.setDurability((short) (itemInHand.getDurability()+1));
+											} else {
+												p.getInventory().setItemInMainHand(new ItemStack(Material.AIR));
+											}
+											
 											b.getLocation().getWorld().dropItem(b.getLocation(), item);
 											cantidadItem--;
 											b.setMetadata(nombreItem, new FixedMetadataValue(m, cantidadItem));
@@ -247,6 +261,57 @@ public class MecanicasCaza implements Listener, Plugin {
 										}
 									}
 								}
+							}
+						} else {
+							p.sendMessage(ChatColor.DARK_RED+"Necesitas un cuchillo de cazador para trabajar con el animal.");
+						}
+					}
+				}
+			}
+		} else if (e.getAction() == Action.RIGHT_CLICK_BLOCK) {
+			Block b = e.getClickedBlock();
+			
+			for (int i = 0; i < m.animalesCazables.size(); i++) {
+				if (b.hasMetadata("left")) {
+					if (b.hasMetadata("Cadaver de " + m.animalesCazables.get(i).toLowerCase())) {
+						e.setCancelled(true);
+						
+						if (!nombreItemInHand.equalsIgnoreCase("§fCuchillo de cazador")) {
+							if (b.hasMetadata("sin-desollar")) {
+								p.sendMessage(ChatColor.DARK_RED+"Para recoger un cadáver completo primero tienes que desollarlo.");
+								
+							} else if (b.hasMetadata("desollado")) {
+								ItemStack cadaver = new ItemStack(Material.DIAMOND_HOE);
+								ItemMeta cadaverMeta = cadaver.getItemMeta();
+								
+								cadaverMeta.setDisplayName("§fCadaver de " + m.animalesCazables.get(i).toLowerCase());
+								cadaverMeta.setLore(new ArrayList<String>(Arrays.asList("El cadáver de un animal desollado.")));
+								
+								cadaverMeta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+								cadaverMeta.addItemFlags(ItemFlag.HIDE_UNBREAKABLE);
+								cadaverMeta.setUnbreakable(true);
+								
+								cadaver.setItemMeta(cadaverMeta);
+								
+								
+								for (ItemStack item : m.itemsCustomCaza) {
+									String nombreItem = "";
+									
+									if (item.hasItemMeta()) {
+										nombreItem = item.getItemMeta().getDisplayName();
+									} else {
+										nombreItem = item.getType().toString();
+									}
+									
+									b.removeMetadata(nombreItem, m);
+								}
+								
+								b.removeMetadata("desollado", m);
+								b.removeMetadata("Cadaver de " + m.animalesCazables.get(i), m);
+								b.removeMetadata("left", m);
+								b.setType(Material.AIR);
+								
+								b.getLocation().getWorld().dropItem(b.getLocation(), cadaver);
 							}
 						}
 					}

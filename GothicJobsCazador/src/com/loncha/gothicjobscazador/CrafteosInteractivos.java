@@ -30,9 +30,9 @@ public class CrafteosInteractivos implements Listener {
 	ArrayList<String> tipoConstrucciones = new ArrayList<String>(Arrays.asList("mesa de trabajo","estante para cuero","estante para comida"));
 	ArrayList<Material> objetosMesa = new ArrayList<Material>(Arrays.asList(Material.LOG, Material.LOG_2));
 	
-	ArrayList<Integer> usosTronco = new ArrayList<Integer>(Arrays.asList(5,10,15,20,25,30));
-	ArrayList<String> resultadosPorUso = new ArrayList<String>(Arrays.asList("§fMango corto", "§fMango medio", "§fMango largo", "§fAsta", "§fCuerpo de arco de "));
-	ArrayList<Material> resultadosPorUsoMaterial = new ArrayList<Material>(Arrays.asList(Material.BLAZE_ROD,Material.BLAZE_ROD,Material.BLAZE_ROD,Material.BLAZE_ROD,Material.BLAZE_ROD));
+	ArrayList<Integer> usosTronco = new ArrayList<Integer>(Arrays.asList(1,2,4,6,8,10,12));
+	ArrayList<String> resultadosPorUso = new ArrayList<String>(Arrays.asList("§fPalo para mezclar","§fMango corto", "§fMango medio", "§fMango largo", "§fAsta", "§fCuerpo de arco de "));
+	ArrayList<Material> resultadosPorUsoMaterial = new ArrayList<Material>(Arrays.asList(Material.BLAZE_ROD,Material.BLAZE_ROD,Material.BLAZE_ROD,Material.BLAZE_ROD,Material.BLAZE_ROD,Material.BLAZE_ROD));
 	
 	ArrayList<String> cueroParaSecar = new ArrayList<String>(Arrays.asList("§fPiel pequeña limpia", "§fPiel mediana limpia", "§fPiel grande limpia"));
 	ArrayList<String> cueroParaLavar = new ArrayList<String>(Arrays.asList("§fPiel pequeña sucia", "§fPiel mediana sucia", "§fPiel grande sucia"));
@@ -129,10 +129,11 @@ public class CrafteosInteractivos implements Listener {
 					if (b.getMetadata("herramientacazador").get(0).asString().equalsIgnoreCase(nombreItemInHand)) {
 						
 						e.setCancelled(true);
-						b.removeMetadata("constructor", m);
+						b.setMetadata("tipo", new FixedMetadataValue(m,"cazador"));
+
 						//PERMISO NECESARIO
-						if (p.hasPermission("gjobs.cazador0")) {
-							if (b.getMetadata("usos").get(0).asInt() < 35) {
+						if (p.hasPermission("gjobs.cazador1")) {
+							if (b.getMetadata("usos").get(0).asInt() < 13) {
 								int usos = b.getMetadata("usos").get(0).asInt();
 								b.setMetadata("usos", new FixedMetadataValue(m,usos+1));
 								b.getWorld().dropItem(b.getLocation(), new ItemStack(Material.STICK));
@@ -213,6 +214,9 @@ public class CrafteosInteractivos implements Listener {
 						
 						b.setType(Material.AIR);
 						b.removeMetadata("left", m);
+						b.removeMetadata("cazador",m);
+						b.removeMetadata("tipo", m);
+						b.removeMetadata("resultado", m);
 						b.removeMetadata(nombre, m);
 					}
 					
@@ -269,7 +273,7 @@ public class CrafteosInteractivos implements Listener {
 						                    bCuero.setData((byte) 15);
 					                	}
 					                }
-					            }, 100);
+					            }, 216000);
 					            
 					            for (Player players : Bukkit.getOnlinePlayers()) {
 				    				if (p.getLocation().distanceSquared(players.getLocation()) <= 10) {
@@ -327,7 +331,7 @@ public class CrafteosInteractivos implements Listener {
 					                		}
 					                	}
 					                }
-					            }, 100);
+					            }, 72000);
 					            
 					            for (Player players : Bukkit.getOnlinePlayers()) {
 				    				if (p.getLocation().distanceSquared(players.getLocation()) <= 10) {
@@ -356,7 +360,7 @@ public class CrafteosInteractivos implements Listener {
 									p.getInventory().setItemInMainHand(itemInHand);
 								}
 								
-								ItemStack cuerolimpio = new ItemStack(Material.LEATHER);
+								ItemStack cuerolimpio = new ItemStack(Material.BLAZE_ROD);
 								ItemMeta cuerometa = cuerolimpio.getItemMeta();
 								
 								String nombreItem = "";
@@ -370,7 +374,6 @@ public class CrafteosInteractivos implements Listener {
 								}
 								
 								cuerometa.setDisplayName(nombreItem);
-								cuerometa.setLore(new ArrayList<String>(Arrays.asList("Piel limpia de un animal.")));
 								
 								cuerolimpio.setItemMeta(cuerometa);
 								
