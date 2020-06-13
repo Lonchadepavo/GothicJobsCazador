@@ -23,6 +23,7 @@ public class Main extends JavaPlugin implements Listener{
 	
 	public static ArrayList<ArrayList<ArrayList<ArrayList<String>>>> listaCaza = new ArrayList<ArrayList<ArrayList<ArrayList<String>>>>();
 	public static List<String> animalesCazables = new ArrayList<String>();
+	public static List<String> disguiseAnimales = new ArrayList<String>();
 	public static ArrayList<ItemStack> itemsCustomCaza = new ArrayList<ItemStack>();
 	
 	FileConfiguration configFile;
@@ -52,8 +53,15 @@ public class Main extends JavaPlugin implements Listener{
 		
 		listaCaza = new ArrayList<ArrayList<ArrayList<ArrayList<String>>>>();
 		
+		List<String> tempAnimales = getCustomConfig().getStringList("animales");
+		
 		//Cargar lista de animales cazables
-		animalesCazables = getCustomConfig().getStringList("animales");
+		for (String s : tempAnimales) {
+			String[] splited = s.split("/");
+			
+			animalesCazables.add(splited[0]);
+			disguiseAnimales.add(splited[1]);
+		}
 		
 		//Niveles de caza
 		for (int i = 0; i < 6; i++) {

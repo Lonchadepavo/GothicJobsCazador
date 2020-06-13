@@ -18,12 +18,18 @@ import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.inventory.ItemFlag;
@@ -33,12 +39,16 @@ import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginLoader;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitScheduler;
+import org.bukkit.util.EulerAngle;
 
 import javax.swing.Timer;
 
 import com.loncha.gothicjobs.Profesiones;
 
+import me.libraryaddict.disguise.disguisetypes.DisguiseType;
+import me.libraryaddict.disguise.disguisetypes.MobDisguise;
 import net.minecraft.server.v1_12_R1.CustomFunction.c;
 
 public class MecanicasCaza implements Listener, Plugin {
@@ -59,7 +69,6 @@ public class MecanicasCaza implements Listener, Plugin {
 	//PROCESO DE MATAR A UN MOB Y COMPROBAR SI DEJA CADAVER O NO
 	@EventHandler
 	public void onEntityDeathEvent(EntityDeathEvent e) {
-		
 		if (e.getEntity().getKiller() instanceof Player) {
 			Player p = e.getEntity().getKiller();
 			ItemStack itemInHand = p.getInventory().getItemInMainHand();
@@ -101,31 +110,45 @@ public class MecanicasCaza implements Listener, Plugin {
 								}
 								
 								//Crear bloque
-								Block b = l.getBlock();
-								
-								if (b.getType().toString().contains("SLAB") || b.getType().toString().contains("STEP") ) {
-									Location loc = new Location(p.getWorld(), b.getLocation().getX(), b.getLocation().getY()+1,b.getLocation().getZ());		
-									b = loc.getBlock();
-								}
-								
-								b.setType(Material.WOOL);
-								b.setData((byte) 12);
+								Entity entity = l.getWorld().spawnEntity(new Location(l.getWorld(), l.getX(), l.getY(), l.getZ()), EntityType.ARMOR_STAND);
+								LivingEntity lEntity = (LivingEntity) entity;
+
+								Bukkit.getScheduler().scheduleSyncDelayedTask(m, new Runnable() {
+								    @Override
+								    public void run() {
+										Location standLoc = lEntity.getLocation();
+										standLoc.setPitch(lEntity.getLocation().getPitch()+250);
+										lEntity.teleport(standLoc);
+										lEntity.setAI(false);
+										lEntity.setCustomName(e.getEntity().getCustomName());
+										lEntity.setCustomNameVisible(true);
+										lEntity.setInvulnerable(true);
+										lEntity.setRemoveWhenFarAway(false);
+										int index = m.animalesCazables.indexOf(entity.getCustomName());
+										
+										MobDisguise disguise = new MobDisguise(DisguiseType.valueOf(m.disguiseAnimales.get(index)));
+									
+										disguise.setEntity(entity);
+										disguise.startDisguise();
+								    }
+								}, 1);
+
 								
 								p.sendMessage("El cadáver del animal cae al suelo");
 								
 								//Añadir metadatos
 								String sindesollar = "sin-desollar";
 								
-								b.setMetadata(sindesollar, new FixedMetadataValue(m,"true"));
-								b.setMetadata("Cadaver de " + entityName.toLowerCase(), new FixedMetadataValue(m,"true"));
-								b.setMetadata("left", new FixedMetadataValue(m,"true"));
+								lEntity.setMetadata(sindesollar, new FixedMetadataValue(m,"true"));
+								lEntity.setMetadata("Cadaver de " + entityName.toLowerCase(), new FixedMetadataValue(m,"true"));
+								lEntity.setMetadata("left", new FixedMetadataValue(m,"true"));
 								
 								for (int k = 0; k < material.size(); k++) {
-									b.setMetadata(material.get(k), new FixedMetadataValue(m, cantidad.get(k)));
+									lEntity.setMetadata(material.get(k), new FixedMetadataValue(m, cantidad.get(k)));
 								}
 								
 								BukkitScheduler scheduler = Bukkit.getServer().getScheduler();
-					            scheduler.scheduleSyncDelayedTask(m, new CrearCadaver(b,m), 6000);
+					            scheduler.scheduleSyncDelayedTask(m, new CrearCadaver(lEntity,m), 6000);
 							}
 						}
 					}
@@ -136,26 +159,26 @@ public class MecanicasCaza implements Listener, Plugin {
 	
 	//EVENTO PARA LAS MECÁNICAS RELACIONADAS CON LA CAZA AL INTERACTUAR CON EL CLICK DERECHO (DESPELLEJAR Y TROCEAR ANIMALES)
 	@EventHandler
-	public void onPlayerInteract(PlayerInteractEvent e) {
-		Player p = e.getPlayer();
-		ItemStack itemInHand = p.getInventory().getItemInMainHand();
-		String nombreItemInHand = "";
-		
-		if (itemInHand.hasItemMeta()) {
-			nombreItemInHand = itemInHand.getItemMeta().getDisplayName();
-		} else {
-			nombreItemInHand = itemInHand.getType().toString();
-		}
-		
-		if (e.getAction() == Action.LEFT_CLICK_BLOCK) {
-			Block b = e.getClickedBlock();
+	public void onPlayerInteractEntity(EntityDamageByEntityEvent e) {
+		if (e.getDamager() instanceof Player) {
+			Player p = (Player) e.getDamager();
+			ItemStack itemInHand = p.getInventory().getItemInMainHand();
+			String nombreItemInHand = "";
+			
+			if (itemInHand.hasItemMeta()) {
+				nombreItemInHand = itemInHand.getItemMeta().getDisplayName();
+			} else {
+				nombreItemInHand = itemInHand.getType().toString();
+			}
+			
+			Entity b = e.getEntity();
 			
 			for (int i = 0; i < m.animalesCazables.size(); i++) {
 				if (b.hasMetadata("left")) {
 					if (b.hasMetadata("Cadaver de " + m.animalesCazables.get(i).toLowerCase())) {
 						e.setCancelled(true);
-						
 						if (nombreItemInHand.equalsIgnoreCase("§fCuchillo de cazador")) {
+							ArmorStand std = (ArmorStand) b;
 							if (b.hasMetadata("sin-desollar")) {
 								for (ItemStack item : m.itemsCustomCaza) {
 									String nombreItem = "";
@@ -186,8 +209,6 @@ public class MecanicasCaza implements Listener, Plugin {
 												b.removeMetadata("sin-desollar", m);
 												
 												b.setMetadata("desollado", new FixedMetadataValue(m,"true"));
-												b.setType(Material.WOOL);
-												b.setData((byte) 2);
 												
 												int nivelDeCazador = getNivelCaza(p);
 												ArrayList<ArrayList<ArrayList<String>>> nivelCaza = m.listaCaza.get(nivelDeCazador);
@@ -211,13 +232,14 @@ public class MecanicasCaza implements Listener, Plugin {
 													cantidadItem = b.getMetadata(nombreItem).get(0).asInt();
 													cantidadItem--;
 													b.setMetadata(nombreItem, new FixedMetadataValue(m, cantidadItem));
-													
 													if (cantidadItem == 0) {
+														p.sendMessage("Has desollado al animal");
+														
 														b.removeMetadata(nombreItem, m);
 														b.removeMetadata("desollado", m);
 														b.removeMetadata("Cadaver de " + m.animalesCazables.get(i), m);
 														b.removeMetadata("left", m);
-														b.setType(Material.AIR);
+														b.remove();
 													}
 												}
 											}
@@ -256,7 +278,6 @@ public class MecanicasCaza implements Listener, Plugin {
 												b.removeMetadata("desollado", m);
 												b.removeMetadata("Cadaver de " + m.animalesCazables.get(i), m);
 												b.removeMetadata("left", m);
-												b.setType(Material.AIR);
 											}
 										}
 									}
@@ -268,51 +289,64 @@ public class MecanicasCaza implements Listener, Plugin {
 					}
 				}
 			}
-		} else if (e.getAction() == Action.RIGHT_CLICK_BLOCK) {
-			Block b = e.getClickedBlock();
-			
-			for (int i = 0; i < m.animalesCazables.size(); i++) {
-				if (b.hasMetadata("left")) {
-					if (b.hasMetadata("Cadaver de " + m.animalesCazables.get(i).toLowerCase())) {
-						e.setCancelled(true);
-						
-						if (!nombreItemInHand.equalsIgnoreCase("§fCuchillo de cazador")) {
-							if (b.hasMetadata("sin-desollar")) {
-								p.sendMessage(ChatColor.DARK_RED+"Para recoger un cadáver completo primero tienes que desollarlo.");
+		}
+	}
+	
+	@EventHandler
+	public void onPlayerInteractEntity(PlayerInteractEntityEvent e) {
+		Player p = e.getPlayer();
+		ItemStack itemInHand = p.getInventory().getItemInMainHand();
+		String nombreItemInHand = "";
+		
+		if (itemInHand.hasItemMeta()) {
+			nombreItemInHand = itemInHand.getItemMeta().getDisplayName();
+		} else {
+			nombreItemInHand = itemInHand.getType().toString();
+		}
+		
+		Entity b = e.getRightClicked();
+		
+		for (int i = 0; i < m.animalesCazables.size(); i++) {
+			if (b.hasMetadata("left")) {
+				if (b.hasMetadata("Cadaver de " + m.animalesCazables.get(i).toLowerCase())) {
+					e.setCancelled(true);
+					
+					if (!nombreItemInHand.equalsIgnoreCase("§fCuchillo de cazador")) {
+						if (b.hasMetadata("sin-desollar")) {
+							p.sendMessage(ChatColor.DARK_RED+"Para recoger un cadáver completo primero tienes que desollarlo.");
+							
+						} else if (b.hasMetadata("desollado")) {
+							ItemStack cadaver = new ItemStack(Material.DIAMOND_HOE);
+							ItemMeta cadaverMeta = cadaver.getItemMeta();
+							
+							cadaverMeta.setDisplayName("§fCadaver de " + m.animalesCazables.get(i).toLowerCase());
+							cadaverMeta.setLore(new ArrayList<String>(Arrays.asList("El cadáver de un animal desollado.")));
+							
+							cadaverMeta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+							cadaverMeta.addItemFlags(ItemFlag.HIDE_UNBREAKABLE);
+							cadaverMeta.setUnbreakable(true);
+							
+							cadaver.setItemMeta(cadaverMeta);
+							
+							
+							for (ItemStack item : m.itemsCustomCaza) {
+								String nombreItem = "";
 								
-							} else if (b.hasMetadata("desollado")) {
-								ItemStack cadaver = new ItemStack(Material.DIAMOND_HOE);
-								ItemMeta cadaverMeta = cadaver.getItemMeta();
-								
-								cadaverMeta.setDisplayName("§fCadaver de " + m.animalesCazables.get(i).toLowerCase());
-								cadaverMeta.setLore(new ArrayList<String>(Arrays.asList("El cadáver de un animal desollado.")));
-								
-								cadaverMeta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-								cadaverMeta.addItemFlags(ItemFlag.HIDE_UNBREAKABLE);
-								cadaverMeta.setUnbreakable(true);
-								
-								cadaver.setItemMeta(cadaverMeta);
-								
-								
-								for (ItemStack item : m.itemsCustomCaza) {
-									String nombreItem = "";
-									
-									if (item.hasItemMeta()) {
-										nombreItem = item.getItemMeta().getDisplayName();
-									} else {
-										nombreItem = item.getType().toString();
-									}
-									
-									b.removeMetadata(nombreItem, m);
+								if (item.hasItemMeta()) {
+									nombreItem = item.getItemMeta().getDisplayName();
+								} else {
+									nombreItem = item.getType().toString();
 								}
 								
-								b.removeMetadata("desollado", m);
-								b.removeMetadata("Cadaver de " + m.animalesCazables.get(i), m);
-								b.removeMetadata("left", m);
-								b.setType(Material.AIR);
-								
-								b.getLocation().getWorld().dropItem(b.getLocation(), cadaver);
+								b.removeMetadata(nombreItem, m);
 							}
+							
+							b.removeMetadata("desollado", m);
+							b.removeMetadata("Cadaver de " + m.animalesCazables.get(i), m);
+							b.removeMetadata("left", m);
+							b.remove();
+							
+							b.getLocation().getWorld().dropItem(b.getLocation(), cadaver);
 						}
 					}
 				}
